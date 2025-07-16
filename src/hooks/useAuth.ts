@@ -37,6 +37,9 @@ export const useAuth = () => {
 
   const fetchUserProfile = async (authUser: SupabaseUser) => {
     try {
+      // Add a small delay to ensure auth context is fully established
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
       const { data: profile, error } = await supabase
         .from('profiles')
         .select('*')
@@ -45,7 +48,8 @@ export const useAuth = () => {
 
       if (error) {
         console.error('Error fetching profile:', error);
-        alert('Error obteniendo el perfil: ' + (error.message || 'Error desconocido'));
+        // Don't show alert for profile fetch errors during initial load
+        console.warn('Profile fetch failed, user may need to complete signup');
         return;
       }
 
@@ -62,11 +66,10 @@ export const useAuth = () => {
         setUser(user);
         setIsAuthenticated(true);
       } else {
-        alert('No se encontró el perfil del usuario.');
+        console.warn('No profile found for user, may need to create one');
       }
     } catch (error) {
       console.error('Error in fetchUserProfile:', error);
-      alert('Error inesperado obteniendo el perfil.');
     }
   };
 
@@ -112,6 +115,57 @@ export const useAuth = () => {
       }
 
       if (data.user) {
+        // Create profile immediately after signup
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .insert({
+            id: data.user.id,
+            email,
+            name,
+            role: 'developer',
+          });
+
+        if (profileError) {
+          console.error('Profile creation error:', profileError);
+          // Try to fetch existing profile instead
+          await fetchUserProfile(data.user);
+        } else {
+          // Profile created successfully, fetch it
+          await fetchUserProfile(data.user);
+        }
+      }
+    } catch (error) {
+      console.error('Sign up error:', error);
+      if (
+        typeof error === 'object' && error !== null &&
+        'status' in error && (error as any).status === 422 &&
+        'code' in error && (error as any).code === 'user_already_exists'
+      ) {
+        alert('El correo ya está registrado. Por favor, inicia sesión.');
+      } else if (typeof error === 'object' && error !== null && 'message' in error) {
+        alert((error as any).message || 'Sign up failed');
+      } else {
+        alert('Sign up failed');
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const signUp = async (email: string, password: string, name: string) => {
+    setIsLoading(true);
+
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      if (data.user) {
         // Create profile
         const { error: profileError } = await supabase
           .from('profiles')
@@ -124,7 +178,7 @@ export const useAuth = () => {
 
         if (profileError) {
           console.error('Profile creation error:', profileError);
-          alert('Error creando el perfil: ' + (profileError.message || 'Error desconocido'));
+          // Don't show alert, just log the error
         }
       }
     } catch (error) {
