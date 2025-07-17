@@ -137,7 +137,10 @@ export class GitHubService {
         return { valid: false, error: 'No token provided' };
       }
 
+      // Obtener el usuario primero para el username
       const user = await this.getUser();
+      
+      // Validar con el backend
       const response = await this.makeBackendRequest('/api/validate-github-credentials', {
         method: 'POST',
         body: JSON.stringify({
@@ -146,8 +149,13 @@ export class GitHubService {
         })
       });
 
-      return { valid: response.success, user: response.user };
+      if (response.success) {
+        return { valid: true, user: response.user || user };
+      } else {
+        return { valid: false, error: response.error || 'Validation failed' };
+      }
     } catch (error: any) {
+      // Si falla obtener el usuario, el token es inválido
       return { 
         valid: false, 
         error: error.message || 'Invalid credentials' 
@@ -162,21 +170,26 @@ export class GitHubService {
         method: 'POST',
         body: JSON.stringify({
           token: this.token,
-          owner,
-          repo
+          username: owner,
+          repository: repo
         })
       });
 
-      return { valid: response.success, repository: response.repository };
-    } catch (error: any) {
+      if (response.success) {
+        return { valid: true, repository: response.repository };
+      } else {
+        return { valid: false, error: response.error || 'Repository validation failed' };
+      }
+    } catch (error: unknown) {
       // Fallback to direct API call
       try {
         const repository = await this.getRepository(owner, repo);
         return { valid: true, repository };
-      } catch (fallbackError: any) {
+      } catch (fallbackError: unknown) {
+        const errorMessage = fallbackError instanceof Error ? fallbackError.message : 'Repository not found or not accessible';
         return { 
           valid: false, 
-          error: fallbackError.message || 'Repository not found or not accessible' 
+          error: errorMessage
         };
       }
     }

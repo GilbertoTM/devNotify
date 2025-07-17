@@ -119,6 +119,7 @@ app.get('/health', (req, res) => {
 // Endpoint para validar credenciales de GitHub
 app.post('/api/validate-github-credentials', async (req, res) => {
   try {
+    console.log('🔍 Validating GitHub credentials...');
     const { token, username } = req.body;
     
     if (!token || !username) {
@@ -128,7 +129,7 @@ app.post('/api/validate-github-credentials', async (req, res) => {
       });
     }
 
-    const validation = await validateGitHubCredentials(token, username);
+    const validation = await validateGitHubCredentials({ token });
     
     if (!validation.valid) {
       return res.status(401).json({
@@ -154,16 +155,25 @@ app.post('/api/validate-github-credentials', async (req, res) => {
 // Endpoint para validar repositorio de GitHub
 app.post('/api/validate-github-repository', async (req, res) => {
   try {
-    const { token, owner, repo } = req.body;
+    console.log('🔍 Validating GitHub repository...');
+    const { token, owner, repo, username, repository } = req.body;
     
-    if (!token || !owner || !repo) {
+    // Soportar tanto owner/repo como username/repository
+    const finalUsername = owner || username;
+    const finalRepository = repo || repository;
+    
+    if (!finalUsername || !finalRepository) {
       return res.status(400).json({ 
         success: false, 
-        error: 'Missing required parameters' 
+        error: 'Missing required parameters: owner/username and repo/repository' 
       });
     }
 
-    const validation = await validateGitHubRepository(token, owner, repo);
+    const validation = await validateGitHubRepository({ 
+      token, 
+      username: finalUsername, 
+      repository: finalRepository 
+    });
     
     if (!validation.valid) {
       return res.status(404).json({
@@ -199,12 +209,13 @@ app.get('/api/github/:owner/:repo/commits', async (req, res) => {
       });
     }
 
-    const commits = await getRepositoryCommits(token, owner, repo);
-    
-    res.json({
-      success: true,
-      commits
+    const commits = await getRepositoryCommits({ 
+      token, 
+      username: owner, 
+      repository: repo 
     });
+    
+    res.json(commits);
 
   } catch (error) {
     console.error('Error fetching repository commits:', error);
@@ -228,12 +239,13 @@ app.get('/api/github/:owner/:repo/issues', async (req, res) => {
       });
     }
 
-    const issues = await getRepositoryIssues(token, owner, repo);
-    
-    res.json({
-      success: true,
-      issues
+    const issues = await getRepositoryIssues({ 
+      token, 
+      username: owner, 
+      repository: repo 
     });
+    
+    res.json(issues);
 
   } catch (error) {
     console.error('Error fetching repository issues:', error);
