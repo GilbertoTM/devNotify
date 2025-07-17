@@ -288,16 +288,22 @@ function App() {
                 // Add integrations for each service
                 if (projectData.services && projectData.services.length > 0) {
                   console.log('Adding integrations for services:', projectData.services);
+                  
+                  // Wait a bit for the project to be fully created and membership established
+                  await new Promise(resolve => setTimeout(resolve, 1000));
+                  
                   for (const service of projectData.services) {
                     try {
+                      console.log(`🔧 Adding integration: ${service.id}`);
                       await addIntegration({
                         projectId: newProject.id,
                         type: service.id,
                         name: `${projectData.name} - ${service.id}`,
                         config: service.config
                       });
+                      console.log(`✅ Integration ${service.id} added successfully`);
                     } catch (integrationError) {
-                      console.error('Error adding integration:', service.id, integrationError);
+                      console.error('❌ Error adding integration:', service.id, integrationError);
                       // Continue with other integrations even if one fails
                     }
                   }

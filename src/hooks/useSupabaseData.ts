@@ -172,6 +172,8 @@ export const useSupabaseData = (userId: string | null) => {
     if (!userId) throw new Error('User not authenticated');
     if (!projectData.teamId) throw new Error('Team is required');
     try {
+      console.log('🚀 Creating project:', projectData);
+      
       const { data, error } = await supabase
         .from('projects')
         .insert({
@@ -186,11 +188,33 @@ export const useSupabaseData = (userId: string | null) => {
 
       if (error) throw error;
 
+      console.log('✅ Project created:', data);
+
+      // Add creator as project owner
+      try {
+        const { error: memberError } = await supabase
+          .from('project_members')
+          .insert({
+            project_id: data.id,
+            user_id: userId,
+            role: 'owner'
+          });
+
+        if (memberError) {
+          console.warn('⚠️ Could not add user as project member:', memberError);
+          // Don't throw error here, project was created successfully
+        } else {
+          console.log('✅ User added as project owner');
+        }
+      } catch (memberErr) {
+        console.warn('⚠️ Error adding user as project member:', memberErr);
+      }
+
       // Refresh projects list
       await fetchProjects();
       return data;
     } catch (err) {
-      console.error('Error creating project:', err);
+      console.error('❌ Error creating project:', err);
       throw err;
     }
   };
@@ -241,6 +265,14 @@ export const useSupabaseData = (userId: string | null) => {
     if (!userId) throw new Error('User not authenticated');
 
     try {
+      console.log('🔧 Adding integration:', {
+        projectId: integrationData.projectId,
+        type: integrationData.type,
+        name: integrationData.name,
+        userId,
+        config: integrationData.config
+      });
+
       const { data, error } = await supabase
         .from('integrations')
         .insert({
@@ -254,13 +286,18 @@ export const useSupabaseData = (userId: string | null) => {
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ Supabase error adding integration:', error);
+        throw error;
+      }
+
+      console.log('✅ Integration added successfully:', data);
 
       // Refresh integrations list
       await fetchIntegrations();
       return data;
     } catch (err) {
-      console.error('Error adding integration:', err);
+      console.error('❌ Error adding integration:', err);
       throw err;
     }
   };
