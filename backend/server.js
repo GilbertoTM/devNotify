@@ -78,7 +78,7 @@ app.get('/api/stats', async (req, res) => {
 });
 
 // WebSocket para eventos en tiempo real
-const wss = new WebSocket.Server({ port: 8081 });
+const wss = new WebSocket.Server({ port: 8082 });
 
 wss.on('connection', (ws) => {
   console.log('Cliente WebSocket conectado');
@@ -258,6 +258,6 @@ app.get('/api/github/:owner/:repo/issues', async (req, res) => {
 
 app.listen(port, () => {
   console.log(`🚀 Servidor backend corriendo en http://localhost:${port}`);
-  console.log(`📡 WebSocket corriendo en ws://localhost:8081`);
+  console.log(`📡 WebSocket corriendo en ws://localhost:8082`);
   console.log(`🐳 Conectado a Docker en /var/run/docker.sock`);
 });

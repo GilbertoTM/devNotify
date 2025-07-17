@@ -22,8 +22,30 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   // Agregar opciones para mejor diagnóstico
   global: {
     fetch: (...args) => {
-      console.log('Realizando solicitud a Supabase');
-      return fetch(...args);
+      const [url, options] = args;
+      const method = options?.method || 'GET';
+      const urlPath = typeof url === 'string' ? new URL(url).pathname : 'unknown';
+      
+      // Solo logear operaciones importantes para reducir ruido
+      if (method !== 'GET' || urlPath.includes('rpc/')) {
+        console.log(`📡 Supabase ${method} ${urlPath}`);
+      }
+      
+      const startTime = Date.now();
+      return fetch(...args).then(response => {
+        const duration = Date.now() - startTime;
+        
+        // Solo logear si tarda más de 1 segundo o es una operación de escritura
+        if (duration > 1000 || method !== 'GET') {
+          console.log(`✅ Supabase ${method} ${urlPath} completado en ${duration}ms`);
+        }
+        
+        return response;
+      }).catch(error => {
+        const duration = Date.now() - startTime;
+        console.error(`❌ Supabase ${method} ${urlPath} falló en ${duration}ms:`, error);
+        throw error;
+      });
     }
   }
 });
@@ -45,5 +67,33 @@ export const testSupabaseConnection = async () => {
   } catch (error) {
     console.error('💥 Error de conectividad:', error);
     return false;
+  }
+};
+
+// Función helper para agregar timeout a consultas de Supabase
+export const withTimeout = async <T>(
+  promise: Promise<T>,
+  timeoutMs: number = 15000,
+  operation: string = 'Supabase operation'
+): Promise<T> => {
+  let timeoutId: NodeJS.Timeout | undefined;
+  
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    timeoutId = setTimeout(() => {
+      console.error(`⏰ [${operation}] Timeout después de ${timeoutMs}ms`);
+      reject(new Error(`${operation} timeout after ${timeoutMs}ms`));
+    }, timeoutMs);
+  });
+
+  try {
+    console.log(`⏳ [${operation}] Iniciando operación con timeout de ${timeoutMs}ms`);
+    const result = await Promise.race([promise, timeoutPromise]);
+    console.log(`✅ [${operation}] Operación completada exitosamente`);
+    if (timeoutId) clearTimeout(timeoutId); // Cancelar el timeout cuando la operación se completa
+    return result;
+  } catch (error) {
+    if (timeoutId) clearTimeout(timeoutId); // Cancelar el timeout en caso de error también
+    console.error(`❌ [${operation}] Operación falló:`, error);
+    throw error;
   }
 };

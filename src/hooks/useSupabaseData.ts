@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { supabase } from '../lib/supabase';
+import { supabase, withTimeout } from '../lib/supabase';
 import { Project, Team, Integration, Notification } from '../types';
 
 export const useSupabaseData = (userId: string | null) => {
@@ -174,17 +174,23 @@ export const useSupabaseData = (userId: string | null) => {
     try {
       console.log('🚀 Creating project:', projectData);
       
-      const { data, error } = await supabase
-        .from('projects')
-        .insert({
-          name: projectData.name,
-          description: projectData.description,
-          color: projectData.color || '#3B82F6',
-          created_by: userId,
-          team_id: projectData.teamId,
-        })
-        .select()
-        .single();
+      const result = await withTimeout(
+        Promise.resolve(supabase
+          .from('projects')
+          .insert({
+            name: projectData.name,
+            description: projectData.description,
+            color: projectData.color || '#3B82F6',
+            created_by: userId,
+            team_id: projectData.teamId,
+          })
+          .select()
+          .single()),
+        10000,
+        'CreateProject'
+      );
+      
+      const { data, error } = result as any;
 
       if (error) throw error;
 
@@ -192,17 +198,27 @@ export const useSupabaseData = (userId: string | null) => {
 
       // Add creator as project owner
       try {
-        const { error: memberError } = await supabase
-          .from('project_members')
-          .insert({
-            project_id: data.id,
-            user_id: userId,
-            role: 'owner'
-          });
+        const memberResult = await withTimeout(
+          Promise.resolve(supabase
+            .from('project_members')
+            .insert({
+              project_id: data.id,
+              user_id: userId,
+              role: 'owner'
+            })),
+          5000,
+          'AddProjectMember'
+        );
+        
+        const { error: memberError } = memberResult as any;
 
         if (memberError) {
-          console.warn('⚠️ Could not add user as project member:', memberError);
-          // Don't throw error here, project was created successfully
+          // Si es error de duplicado, está bien - el usuario ya es miembro
+          if (memberError.code === '23505') {
+            console.log('✅ User is already a project member');
+          } else {
+            console.warn('⚠️ Could not add user as project member:', memberError);
+          }
         } else {
           console.log('✅ User added as project owner');
         }
@@ -227,27 +243,35 @@ export const useSupabaseData = (userId: string | null) => {
     if (!userId) throw new Error('User not authenticated');
 
     try {
-      console.log('Creating team with data:', teamData);
+      console.log('🏢 Creating team with data:', teamData);
       
-      const { data, error } = await supabase
-        .from('teams')
-        .insert({
-          name: teamData.name,
-          description: teamData.description,
-          created_by: userId,
-        })
-        .select()
-        .single();
+      const result = await withTimeout(
+        Promise.resolve(supabase
+          .from('teams')
+          .insert({
+            name: teamData.name,
+            description: teamData.description,
+            created_by: userId,
+          })
+          .select()
+          .single()),
+        8000,
+        'CreateTeam'
+      );
+      
+      const { data, error } = result as any;
 
       if (error) {
-        console.error('Supabase team creation error:', error);
+        console.error('❌ Supabase team creation error:', error);
         throw new Error(`Failed to create team: ${error.message}`);
       }
 
-      console.log('Team created successfully:', data);
+      console.log('✅ Team created successfully:', data);
       
-      // Refresh teams list
-      await fetchTeams();
+      // Refresh teams list en segundo plano (no bloquear)
+      fetchTeams().catch(err => {
+        console.warn('⚠️ Failed to refresh teams list:', err);
+      });
       return data;
     } catch (err: any) {
       console.error('Error creating team:', err);
@@ -273,18 +297,24 @@ export const useSupabaseData = (userId: string | null) => {
         config: integrationData.config
       });
 
-      const { data, error } = await supabase
-        .from('integrations')
-        .insert({
-          project_id: integrationData.projectId,
-          type: integrationData.type,
-          name: integrationData.name,
-          config: integrationData.config,
-          created_by: userId,
-          status: 'connected',
-        })
-        .select()
-        .single();
+      const result = await withTimeout(
+        Promise.resolve(supabase
+          .from('integrations')
+          .insert({
+            project_id: integrationData.projectId,
+            type: integrationData.type,
+            name: integrationData.name,
+            config: integrationData.config,
+            created_by: userId,
+            status: 'connected',
+          })
+          .select()
+          .single()),
+        8000,
+        'AddIntegration'
+      );
+      
+      const { data, error } = result as any;
 
       if (error) {
         console.error('❌ Supabase error adding integration:', error);
@@ -293,8 +323,10 @@ export const useSupabaseData = (userId: string | null) => {
 
       console.log('✅ Integration added successfully:', data);
 
-      // Refresh integrations list
-      await fetchIntegrations();
+      // Refresh integrations list en segundo plano (no bloquear)
+      fetchIntegrations().catch(err => {
+        console.warn('⚠️ Failed to refresh integrations list:', err);
+      });
       return data;
     } catch (err) {
       console.error('❌ Error adding integration:', err);

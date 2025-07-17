@@ -249,22 +249,22 @@ function App() {
             onProjectClick={handleProjectClick}
             onCreateProject={async (projectData) => {
               try {
-                console.log('Starting project creation with data:', projectData);
+                console.log('🚀 [App] Starting project creation with data:', projectData);
                 
                 let teamId = teams && teams.length > 0 ? teams[0].id : null;
                 
                 // Si no hay equipos, crear uno automáticamente
                 if (!teamId) {
-                  console.log('No teams found, creating default team...');
+                  console.log('📊 [App] No teams found, creating default team...');
                   try {
                     const newTeam = await createTeam({
                       name: user?.name ? `Equipo de ${user.name}` : 'Mi Equipo',
                       description: 'Equipo creado automáticamente'
                     });
                     teamId = newTeam.id;
-                    console.log('Default team created:', newTeam);
+                    console.log('✅ [App] Default team created:', newTeam);
                   } catch (teamError: any) {
-                    console.error('Failed to create default team:', teamError);
+                    console.error('❌ [App] Failed to create default team:', teamError);
                     alert(`Error creating team: ${teamError.message}`);
                     return;
                   }
@@ -275,7 +275,7 @@ function App() {
                   return;
                 }
 
-                console.log('Creating project with teamId:', teamId);
+                console.log('🏗️ [App] Creating project with teamId:', teamId);
                 const newProject = await createProject({
                   name: projectData.name,
                   description: projectData.description,
@@ -283,14 +283,14 @@ function App() {
                   teamId
                 });
 
-                console.log('Project created successfully:', newProject);
+                console.log('✅ [App] Project created successfully:', newProject);
 
                 // Add integrations for each service
                 if (projectData.services && projectData.services.length > 0) {
-                  console.log('Adding integrations for services:', projectData.services);
+                  console.log('🔧 [App] Adding integrations for services:', projectData.services);
                   
-                  // Wait a bit for the project to be fully created and membership established
-                  await new Promise(resolve => setTimeout(resolve, 1000));
+                  // Reducir la espera a 500ms para que las integraciones se procesen más rápido
+                  await new Promise(resolve => setTimeout(resolve, 500));
                   
                   for (const service of projectData.services) {
                     try {

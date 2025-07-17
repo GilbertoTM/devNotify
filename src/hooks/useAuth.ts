@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { User as SupabaseUser, AuthSession, AuthChangeEvent } from '@supabase/supabase-js';
-import { supabase } from '../lib/supabase';
+import { supabase, withTimeout } from '../lib/supabase';
 import { User } from '../types';
 
 export const useAuth = () => {
@@ -37,21 +37,28 @@ export const useAuth = () => {
 
   const fetchUserProfile = async (authUser: SupabaseUser) => {
     try {
+      console.log('🔍 [fetchUserProfile] Fetching user profile for:', authUser.email);
       // Add a small delay to ensure auth context is fully established
       await new Promise(resolve => setTimeout(resolve, 100));
       
-      const { data: profile, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', authUser.id)
-        .single();
+      const result = await withTimeout(
+        Promise.resolve(supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', authUser.id)
+          .single()),
+        15000,
+        'FetchUserProfile'
+      );
+      
+      const { data: profile, error } = result as any;
 
       if (error) {
-        console.error('Error fetching profile:', error);
+        console.error('❌ Error fetching profile:', error);
         
         // Si es un error 500, probablemente es un problema de RLS
         if (error.message?.includes('500') || error.code === 'PGRST301') {
-          console.warn('RLS policy error - creating profile from auth user');
+          console.warn('⚠️ RLS policy error - creating profile from auth user');
           
           // Crear el perfil desde los datos del usuario autenticado
           const fallbackUser: User = {
@@ -66,13 +73,16 @@ export const useAuth = () => {
           
           setUser(fallbackUser);
           setIsAuthenticated(true);
+          console.log('✅ Fallback user profile created');
           
-          // Intentar crear el perfil en segundo plano
-          await createUserProfile(authUser, fallbackUser.name);
+          // Intentar crear el perfil en segundo plano (sin bloquear)
+          createUserProfile(authUser, fallbackUser.name).catch(err => {
+            console.warn('Background profile creation failed:', err);
+          });
           return;
         }
         
-        console.warn('Profile fetch failed, user may need to complete signup');
+        console.warn('⚠️ Profile fetch failed, user may need to complete signup');
         return;
       }
 
@@ -88,13 +98,32 @@ export const useAuth = () => {
         };
         setUser(user);
         setIsAuthenticated(true);
+        console.log('✅ User profile loaded successfully');
       } else {
-        console.warn('No profile found for user, may need to create one');
-        // Crear perfil desde datos de auth
-        await createUserProfile(authUser, authUser.user_metadata?.name || authUser.email?.split('@')[0] || 'User');
+        console.warn('⚠️ No profile found for user, creating one...');
+        // Crear perfil desde datos de auth (sin bloquear)
+        const userName = authUser.user_metadata?.name || authUser.email?.split('@')[0] || 'User';
+        createUserProfile(authUser, userName).catch(err => {
+          console.warn('Background profile creation failed:', err);
+        });
       }
     } catch (error) {
-      console.error('Error in fetchUserProfile:', error);
+      console.error('💥 Error in fetchUserProfile:', error);
+      
+      // Si falla todo, crear un usuario básico para no bloquear la aplicación
+      const fallbackUser: User = {
+        id: authUser.id,
+        email: authUser.email || '',
+        name: authUser.user_metadata?.name || authUser.email?.split('@')[0] || 'User',
+        avatar: authUser.user_metadata?.avatar_url || null,
+        role: 'developer',
+        createdAt: authUser.created_at,
+        lastLogin: 'Just now',
+      };
+      
+      setUser(fallbackUser);
+      setIsAuthenticated(true);
+      console.log('✅ Emergency fallback user created');
     }
   };
 
@@ -136,14 +165,14 @@ export const useAuth = () => {
 
   const login = async (email: string, password: string) => {
     setIsLoading(true);
-    console.log('🚀 Iniciando proceso de login con timeout de 60s...');
+    console.log('🚀 [login] Iniciando proceso de login con timeout de 30s...');
     
     // Implementar un timeout para evitar esperas infinitas
     const timeoutPromise = new Promise((_, reject) => 
       setTimeout(() => {
-        console.log('⏰ Timeout alcanzado - 60 segundos');
+        console.log('⏰ [login] Timeout alcanzado - 30 segundos');
         reject(new Error('Tiempo de espera agotado'));
-      }, 60000)
+      }, 30000)
     );
     
     try {

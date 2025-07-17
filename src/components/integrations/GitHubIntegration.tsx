@@ -193,15 +193,19 @@ export const GitHubIntegration: React.FC<GitHubIntegrationProps> = ({
         <div className="form-group">
           <label htmlFor="github-branch" className="block text-sm font-medium text-gray-300 mb-2">
             Rama Principal
+            <span className="text-gray-500 text-xs ml-2">(opcional - deja vacío para todas las ramas)</span>
           </label>
           <input
             id="github-branch"
             type="text"
-            placeholder="main"
-            value={config.branch || 'main'}
+            placeholder="main, github, develop... (opcional)"
+            value={config.branch || ''}
             onChange={(e) => handleChange('branch', e.target.value)}
             className="w-full px-3 py-2 bg-gray-700/50 border border-gray-600/50 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50"
           />
+          <p className="text-xs text-gray-500 mt-1">
+            Si está vacío, se obtendrán commits de múltiples ramas principales (main, github, master, develop)
+          </p>
         </div>
 
         <div className="form-group">
