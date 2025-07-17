@@ -119,8 +119,54 @@ const validateGitHubRepository = async (credentials) => {
 
 const getRepositoryCommits = async (credentials, limit = 10) => {
   try {
-    const { token, username, repository, branch = 'main' } = credentials;
+    const { token, username, repository, branch } = credentials;
     
+    // Si no se especifica rama, obtener commits de múltiples ramas principales
+    if (!branch) {
+      const branches = ['main', 'master', 'github', 'develop'];
+      let allCommits = [];
+      
+      for (const branchName of branches) {
+        try {
+          const commits = await makeGitHubRequest(
+            `/repos/${username}/${repository}/commits?sha=${branchName}&per_page=${Math.ceil(limit / branches.length)}`,
+            token
+          );
+          
+          const formattedCommits = commits.map(commit => ({
+            sha: commit.sha,
+            message: commit.commit.message,
+            branch: branchName,
+            author: {
+              name: commit.commit.author.name,
+              email: commit.commit.author.email,
+              date: commit.commit.author.date
+            },
+            committer: commit.author ? {
+              login: commit.author.login,
+              avatar_url: commit.author.avatar_url
+            } : null,
+            html_url: commit.html_url
+          }));
+          
+          allCommits = allCommits.concat(formattedCommits);
+        } catch (branchError) {
+          // Rama no existe, continuar con la siguiente
+          console.log(`Branch ${branchName} not found, skipping...`);
+        }
+      }
+      
+      // Ordenar por fecha y limitar
+      allCommits.sort((a, b) => new Date(b.author.date) - new Date(a.author.date));
+      allCommits = allCommits.slice(0, limit);
+      
+      return {
+        success: true,
+        commits: allCommits
+      };
+    }
+    
+    // Si se especifica rama, obtener solo de esa rama
     const commits = await makeGitHubRequest(
       `/repos/${username}/${repository}/commits?sha=${branch}&per_page=${limit}`,
       token
@@ -131,6 +177,7 @@ const getRepositoryCommits = async (credentials, limit = 10) => {
       commits: commits.map(commit => ({
         sha: commit.sha,
         message: commit.commit.message,
+        branch: branch,
         author: {
           name: commit.commit.author.name,
           email: commit.commit.author.email,
