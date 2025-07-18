@@ -47,7 +47,7 @@ export const useAuth = () => {
           .select('*')
           .eq('id', authUser.id)
           .single()),
-        15000,
+        5000,
         'FetchUserProfile'
       );
       
