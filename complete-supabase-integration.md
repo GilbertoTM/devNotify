@@ -808,3 +808,63 @@ return supabaseData;
 **Usa la OPCIÓN 1** (volver al código original) ya que es más automático y completo.
 
 ¿Quieres probar la OPCIÓN 1?
+
+## PROBLEMA: Row Level Security (RLS) bloqueando la inserción
+
+### ¡PROGRESO EXCELENTE!
+- ✅ El JSON es correcto y coincide con tu esquema
+- ✅ La conexión y autenticación básica funciona
+- ❌ RLS (Row Level Security) está bloqueando la inserción
+
+### EL PROBLEMA:
+El error "new row violates row-level security policy for table 'notifications'" indica que tu tabla tiene políticas RLS activas que no permiten insertar datos con la clave `anon`.
+
+### SOLUCIÓN INMEDIATA:
+
+#### OPCIÓN 1: Deshabilitar RLS temporalmente para testing
+
+**Ejecuta este SQL en Supabase SQL Editor:**
+```sql
+-- Deshabilitar RLS temporalmente para testing
+ALTER TABLE notifications DISABLE ROW LEVEL SECURITY;
+```
+
+#### OPCIÓN 2: Crear una política RLS para permitir inserciones
+
+**Ejecuta este SQL en Supabase SQL Editor:**
+```sql
+-- Crear política para permitir inserción desde webhooks
+CREATE POLICY "Allow webhook inserts" ON notifications
+FOR INSERT 
+TO anon
+WITH CHECK (true);
+```
+
+#### OPCIÓN 3: Verificar políticas existentes
+
+**Ejecuta este SQL para ver las políticas actuales:**
+```sql
+-- Ver políticas existentes
+SELECT * FROM pg_policies WHERE tablename = 'notifications';
+```
+
+### RECOMENDACIÓN RÁPIDA:
+
+**Para testing rápido**, usa la **OPCIÓN 1** (deshabilitar RLS temporalmente):
+
+1. **Ve a Supabase SQL Editor**
+2. **Ejecuta**: `ALTER TABLE notifications DISABLE ROW LEVEL SECURITY;`
+3. **Prueba el webhook** de nuevo
+4. **Deberías ver status 200/201** y la notificación insertada
+
+### DESPUÉS DEL TESTING:
+
+Una vez que confirmes que funciona, puedes:
+1. **Reactivar RLS**: `ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;`
+2. **Crear políticas apropiadas** para tu aplicación
+
+### IMPORTANTE:
+- **Solo deshabilita RLS para testing**
+- **En producción siempre usa políticas RLS apropiadas**
+
+¿Quieres probar deshabilitando RLS temporalmente?
