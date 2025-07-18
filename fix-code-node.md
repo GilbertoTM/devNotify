@@ -107,3 +107,50 @@ Solo si el paso anterior funciona, entonces podrás usar el código más complej
 4. Revisa los "Recent Deliveries" en GitHub
 
 ¿Te aparecen los logs cuando haces el commit?
+
+## SOLUCIÓN PARA: "No Respond to Webhook node found"
+
+¡PERFECTO! Este error significa que tu código YA FUNCIONA. Solo necesitas añadir un nodo de respuesta.
+
+### PASO 1: Añadir nodo "Respond to Webhook"
+
+1. **Ve a tu workflow de n8n**
+2. **Añade un nuevo nodo** después del nodo Code
+3. **Busca**: "Respond to Webhook" 
+4. **Conecta**: Code → Respond to Webhook
+
+### PASO 2: Configurar el nodo "Respond to Webhook"
+
+En el nodo "Respond to Webhook":
+- **Status Code**: 200
+- **Body**: `{"success": true, "message": "Webhook procesado correctamente"}`
+- **Headers**: (opcional) `Content-Type: application/json`
+
+### PASO 3: Estructura final del workflow
+
+Tu workflow debería verse así:
+```
+Webhook → Code → Respond to Webhook
+```
+
+### PASO 4: Probar de nuevo
+
+1. **Guarda el workflow**
+2. **Asegúrate de que esté activo**
+3. **Haz otro commit** en GitHub
+4. **Verifica los logs** del nodo Code
+
+### ALTERNATIVA: Cambiar configuración del Webhook
+
+Si no quieres añadir el nodo "Respond to Webhook", puedes:
+
+1. **Haz clic en tu nodo Webhook**
+2. **Ve a la configuración**
+3. **Busca el parámetro "Respond"**
+4. **Cambia de "Immediately" a "When Last Node Finished"**
+
+## ¡IMPORTANTE!
+
+Este error significa que tu código está funcionando correctamente. GitHub está enviando webhooks y n8n los está procesando. Solo necesitas decirle a n8n cómo responder.
+
+¿Qué opción prefieres: añadir el nodo "Respond to Webhook" o cambiar la configuración del webhook?
