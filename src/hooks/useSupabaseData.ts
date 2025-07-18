@@ -2,6 +2,46 @@ import { useState, useEffect } from 'react';
 import { supabase, withTimeout } from '../lib/supabase';
 import { Project, Team, Integration, Notification } from '../types';
 
+// Función para mapear tipos a categorías válidas
+const mapTypeToCategory = (type: string): 'infrastructure' | 'ci_cd' | 'security' | 'database' | 'application' => {
+  const typeMap: Record<string, 'infrastructure' | 'ci_cd' | 'security' | 'database' | 'application'> = {
+    'push': 'ci_cd',
+    'pull_request': 'ci_cd',
+    'issue': 'application',
+    'commit': 'ci_cd',
+    'release': 'ci_cd',
+    'deployment': 'infrastructure',
+    'error': 'application',
+    'warning': 'application',
+    'info': 'application',
+    'success': 'application',
+    'critical': 'infrastructure',
+    'database': 'database',
+    'security': 'security',
+  };
+  
+  return typeMap[type] || 'application'; // Fallback a 'application'
+};
+
+// Función para mapear tipos a tipos válidos de notificación
+const mapTypeToNotificationType = (type: string): 'critical' | 'warning' | 'info' | 'success' => {
+  const typeMap: Record<string, 'critical' | 'warning' | 'info' | 'success'> = {
+    'critical': 'critical',
+    'error': 'critical',
+    'warning': 'warning',
+    'info': 'info',
+    'success': 'success',
+    'push': 'info',
+    'pull_request': 'info',
+    'issue': 'warning',
+    'commit': 'info',
+    'release': 'success',
+    'deployment': 'info',
+  };
+  
+  return typeMap[type] || 'info'; // Fallback a 'info'
+};
+
 export const useSupabaseData = (userId: string | null) => {
   const [projects, setProjects] = useState<Project[]>([]);
   const [teams, setTeams] = useState<Team[]>([]);
@@ -108,14 +148,15 @@ export const useSupabaseData = (userId: string | null) => {
 
   // Fetch notifications for user's projects
   const fetchNotifications = async () => {
-    if (!userId) return;
+    // TEMPORAL: Cargar todas las notificaciones sin filtro de usuario para debug
+    // if (!userId) return;
 
     try {
-      // Consulta simplificada
+      // Consulta simplificada - cargar todas las notificaciones
       const { data, error } = await supabase
         .from('notifications')
         .select('*')
-        .eq('user_id', userId)
+        // .eq('user_id', userId)  // Comentado temporalmente para debug
         .order('created_at', { ascending: false })
         .limit(100);
 
@@ -123,19 +164,19 @@ export const useSupabaseData = (userId: string | null) => {
 
       const formattedNotifications: Notification[] = data?.map((notification: any) => ({
         id: notification.id,
-        type: notification.type,
+        type: mapTypeToNotificationType(notification.type), // Mapear tipo a tipo válido
         service: notification.source || 'system',
         title: notification.title,
         description: notification.message,
         timestamp: formatTimestamp(notification.created_at),
         exactTimestamp: new Date(notification.created_at),
-        category: notification.type,
+        category: mapTypeToCategory(notification.type), // Mapear tipo a categoría válida
         isRead: notification.is_read,
         projectId: notification.project_id,
         projectName: 'Project', // Se cargará por separado si es necesario
         projectColor: '#3B82F6', // Color por defecto
         integrationId: notification.integration_id,
-        severity: notification.severity || 'info',
+        severity: notification.severity || 1, // Cambiar a número
         resolved: notification.resolved || false,
         resolvedAt: notification.resolved_at ? new Date(notification.resolved_at) : undefined,
         resolvedBy: notification.resolved_by,
@@ -143,6 +184,9 @@ export const useSupabaseData = (userId: string | null) => {
         metadata: notification.metadata || {},
       })) || [];
 
+      console.log('🔔 [useSupabaseData] Fetched notifications:', formattedNotifications.length);
+      console.log('🔔 [useSupabaseData] Raw notifications data:', data);
+      console.log('🔔 [useSupabaseData] Formatted notifications:', formattedNotifications);
       setNotifications(formattedNotifications);
     } catch (err) {
       console.error('Error fetching notifications:', err);

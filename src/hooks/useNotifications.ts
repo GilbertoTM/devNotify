@@ -54,20 +54,30 @@ export const useNotifications = () => {
     resolveNotification: resolveSupabaseNotification,
   } = useSupabaseData(user?.id || null);
   
+  // Debug logs
+  console.log('📊 [useNotifications] Current user:', user?.id);
+  console.log('📊 [useNotifications] Total notifications:', notifications.length);
+  console.log('📊 [useNotifications] Notifications:', notifications);
+  
   const [patterns] = useState<NotificationPattern[]>(mockPatterns);
   const [filter, setFilter] = useState<string>('all');
   const [selectedProject, setSelectedProject] = useState<string | null>(null);
 
   const filteredNotifications = notifications.filter(notification => {
-    // Filter by project if one is selected
-    if (selectedProject && notification.projectId !== selectedProject) {
-      return false;
-    }
+    // TEMPORAL: Deshabilitado filtro por proyecto para debug
+    // if (selectedProject && notification.projectId !== selectedProject) {
+    //   return false;
+    // }
     
     // Filter by category
     if (filter === 'all') return true;
     return notification.category === filter;
   });
+
+  console.log('🔍 [useNotifications] Filter:', filter);
+  console.log('🔍 [useNotifications] Selected project:', selectedProject);
+  console.log('🔍 [useNotifications] Filtered notifications:', filteredNotifications.length);
+  console.log('🔍 [useNotifications] Filtered notifications:', filteredNotifications);
 
   const getCounts = () => {
     const counts: Record<string, number> = {

@@ -229,6 +229,15 @@ function App() {
 
   const stats = getStats();
   const counts = getCounts();
+  
+  // Debug logs
+  console.log('🏠 [App] User authenticated:', isAuthenticated);
+  console.log('🏠 [App] User:', user);
+  console.log('🏠 [App] Notifications count:', notifications.length);
+  console.log('🏠 [App] Notifications:', notifications);
+  console.log('🏠 [App] Stats:', stats);
+  console.log('🏠 [App] Counts:', counts);
+  
   const currentProject = selectedProject ? projects.find(p => p.id === selectedProject) : null;
 
   const handleProjectClick = (projectId: string) => {

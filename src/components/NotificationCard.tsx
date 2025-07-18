@@ -49,20 +49,20 @@ export const NotificationCard: React.FC<NotificationCardProps> = ({
   projectColor,
   actions = []
 }) => {
-  const CategoryIcon = categoryIcons[category];
-  const TypeIcon = typeIcons[type];
+  const CategoryIcon = categoryIcons[category] || CloudIcon; // Fallback a CloudIcon
+  const TypeIcon = typeIcons[type] || ExclamationCircleIcon; // Fallback a ExclamationCircleIcon
 
   return (
     <div className={`
       relative border-l-4 bg-gray-800/50 backdrop-blur-sm rounded-lg p-4 mb-3
       hover:bg-gray-800/70 hover:shadow-lg hover:shadow-gray-900/20 hover:scale-[1.02] transition-all duration-300 group
-      ${typeStyles[type]}
+      ${typeStyles[type] || typeStyles.info}
       ${isRead ? 'opacity-60' : ''}
     `}>
       <div className="flex items-start space-x-4">
         <div className={`
           flex items-center justify-center w-10 h-10 rounded-full
-          ${typeStyles[type]} border backdrop-blur-sm group-hover:scale-110 transition-transform duration-200
+          ${typeStyles[type] || typeStyles.info} border backdrop-blur-sm group-hover:scale-110 transition-transform duration-200
         `}>
           <TypeIcon className="w-5 h-5" />
         </div>
