@@ -9,7 +9,7 @@ const items = $input.all();
 console.log('TOTAL ITEMS:', items.length);
 
 if (!items || items.length === 0) {
-  return { success: false, error: 'No hay datos' };
+  return { success: false, error: 'No hay datos' }; // ✅ CAMBIADO: Sin array
 }
 
 const item = items[0];
@@ -17,7 +17,7 @@ const body = item.json?.body;
 const headers = item.json?.headers;
 
 if (!body) {
-  return { success: false, error: 'No body found' };
+  return { success: false, error: 'No body found' }; // ✅ CAMBIADO: Sin array
 }
 
 const eventType = headers?.['x-github-event'] || 'unknown';
@@ -30,18 +30,9 @@ console.log('Repo:', repository?.full_name);
 console.log('Sender:', sender?.login);
 console.log('Commit:', headCommit?.message);
 
-// Mapeo automático de repositorios
-const repositoryMappings = {
-  'GilbertoTM/devNotify': '99c2baa7-5288-4f09-8b0e-b132db353244',
-  'jose/project': '99c2baa7-5288-4f09-8b0e-b132db353244',
-  'arkus/project': '99c2baa7-5288-4f09-8b0e-b132db353244'
-};
-
-const projectId = repositoryMappings[repository?.full_name] || '99c2baa7-5288-4f09-8b0e-b132db353244';
-console.log('PROJECT ID:', projectId);
-
+// Preparar datos directamente para Supabase
 const supabaseData = {
-  project_id: projectId,
+  project_id: '99c2baa7-5288-4f09-8b0e-b132db353244', // Tu ID real
   type: eventType,
   title: `Nuevo ${eventType} en ${repository?.name}`,
   message: `${sender?.login} hizo commit: "${headCommit?.message}"`,
@@ -59,8 +50,8 @@ const supabaseData = {
 
 console.log('DATOS PARA SUPABASE:', JSON.stringify(supabaseData, null, 2));
 
-// RETORNAR OBJETO DIRECTAMENTE, NO ARRAY
-return supabaseData;
+// Retornar datos listos para HTTP Request
+return supabaseData; // ✅ ESTO ESTÁ CORRECTO
 ```
 
 ## PASO 2: Añadir nodo HTTP Request
@@ -342,6 +333,8 @@ const headCommit = body.head_commit;
 
 console.log('Event:', eventType);
 console.log('Repo:', repository?.full_name);
+console.log('Sender:', sender?.login);
+console.log('Commit:', headCommit?.message);
 
 // Mapeo hardcodeado pero dinámico
 const repositoryMappings = {
@@ -510,7 +503,7 @@ const supabaseData = {
 
 console.log('DATOS PARA SUPABASE:', JSON.stringify(supabaseData, null, 2));
 
-return [supabaseData];
+return supabaseData;
 ```
 
 ### PASO 3: Probar la integración
@@ -654,11 +647,16 @@ return supabaseData;
 
 ### CAMBIOS CLAVE:
 
-1. **Cambié `return [supabaseData];` por `return supabaseData;`**
-2. **Cambié `return [{ success: false, error: '...' }];` por `return { success: false, error: '...' };`**
+1. **Línea 5**: Cambié `return [{ success: false, error: 'No hay datos' }]` por `return { success: false, error: 'No hay datos' }`
+2. **Línea 12**: Cambié `return [{ success: false, error: 'No body found' }]` por `return { success: false, error: 'No body found' }`
+3. **Línea 44**: Mantuve `return supabaseData` (esto está correcto)
 
-### RECOMENDACIÓN:
+### RESULTADO:
+Ahora SIEMPRE retornas un objeto `{...}`, nunca un array `[{...}]`, lo que debería solucionar el problema de formato JSON.
 
-**Usa la SOLUCIÓN 3** (código completo) ya que es la más limpia y evita futuros problemas.
+### CONFIGURACIÓN DEL HTTP REQUEST:
+Con este código, tu HTTP Request debería usar:
+- **Body**: `{{ $json }}`
+- **Body Content Type**: `JSON`
 
-¿Ya probaste con el código corregido?
+¿Quieres probar con este código corregido?
