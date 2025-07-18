@@ -9,7 +9,7 @@ const items = $input.all();
 console.log('TOTAL ITEMS:', items.length);
 
 if (!items || items.length === 0) {
-  return [{ success: false, error: 'No hay datos' }];
+  return { success: false, error: 'No hay datos' };
 }
 
 const item = items[0];
@@ -17,7 +17,7 @@ const body = item.json?.body;
 const headers = item.json?.headers;
 
 if (!body) {
-  return [{ success: false, error: 'No body found' }];
+  return { success: false, error: 'No body found' };
 }
 
 const eventType = headers?.['x-github-event'] || 'unknown';
@@ -30,9 +30,18 @@ console.log('Repo:', repository?.full_name);
 console.log('Sender:', sender?.login);
 console.log('Commit:', headCommit?.message);
 
-// Preparar datos directamente para Supabase
+// Mapeo automático de repositorios
+const repositoryMappings = {
+  'GilbertoTM/devNotify': '99c2baa7-5288-4f09-8b0e-b132db353244',
+  'jose/project': '99c2baa7-5288-4f09-8b0e-b132db353244',
+  'arkus/project': '99c2baa7-5288-4f09-8b0e-b132db353244'
+};
+
+const projectId = repositoryMappings[repository?.full_name] || '99c2baa7-5288-4f09-8b0e-b132db353244';
+console.log('PROJECT ID:', projectId);
+
 const supabaseData = {
-  project_id: '99c2baa7-5288-4f09-8b0e-b132db353244', // CAMBIAR POR TU ID DE PROYECTO REAL
+  project_id: projectId,
   type: eventType,
   title: `Nuevo ${eventType} en ${repository?.name}`,
   message: `${sender?.login} hizo commit: "${headCommit?.message}"`,
@@ -50,8 +59,8 @@ const supabaseData = {
 
 console.log('DATOS PARA SUPABASE:', JSON.stringify(supabaseData, null, 2));
 
-// Retornar datos listos para HTTP Request
-return [supabaseData];
+// RETORNAR OBJETO DIRECTAMENTE, NO ARRAY
+return supabaseData;
 ```
 
 ## PASO 2: Añadir nodo HTTP Request
@@ -245,7 +254,7 @@ const items = $input.all();
 console.log('TOTAL ITEMS:', items.length);
 
 if (!items || items.length === 0) {
-  return [{ success: false, error: 'No hay datos' }];
+  return { success: false, error: 'No hay datos' };
 }
 
 const item = items[0];
@@ -253,7 +262,7 @@ const body = item.json?.body;
 const headers = item.json?.headers;
 
 if (!body) {
-  return [{ success: false, error: 'No body found' }];
+  return { success: false, error: 'No body found' };
 }
 
 const eventType = headers?.['x-github-event'] || 'unknown';
@@ -315,7 +324,7 @@ Webhook → Code → HTTP Request (Lookup) → Code (Merge) → HTTP Request (In
 const items = $input.all();
 
 if (!items || items.length === 0) {
-  return [{ success: false, error: 'No hay datos' }];
+  return { success: false, error: 'No hay datos' };
 }
 
 const item = items[0];
@@ -323,7 +332,7 @@ const body = item.json?.body;
 const headers = item.json?.headers;
 
 if (!body) {
-  return [{ success: false, error: 'No body found' }];
+  return { success: false, error: 'No body found' };
 }
 
 const eventType = headers?.['x-github-event'] || 'unknown';
@@ -451,7 +460,7 @@ const items = $input.all();
 console.log('TOTAL ITEMS:', items.length);
 
 if (!items || items.length === 0) {
-  return [{ success: false, error: 'No hay datos' }];
+  return { success: false, error: 'No hay datos' };
 }
 
 const item = items[0];
@@ -459,7 +468,7 @@ const body = item.json?.body;
 const headers = item.json?.headers;
 
 if (!body) {
-  return [{ success: false, error: 'No body found' }];
+  return { success: false, error: 'No body found' };
 }
 
 const eventType = headers?.['x-github-event'] || 'unknown';
@@ -546,3 +555,110 @@ Puedes verificar directamente en Supabase:
 3. **Verifica si aparece la notificación en tu aplicación**
 
 ¿Ya hiciste el commit de prueba?
+
+## SOLUCIÓN PARA ERROR "JSON parameter needs to be valid JSON"
+
+### El problema:
+El nodo Code está retornando un array `[{...}]` pero el HTTP Request necesita un objeto `{...}`.
+
+### SOLUCIÓN 1: Cambiar el código del nodo Code (MÁS SIMPLE)
+
+**Reemplaza la última línea del código del nodo Code:**
+
+**CAMBIAR ESTO:**
+```javascript
+return [supabaseData];
+```
+
+**POR ESTO:**
+```javascript
+return supabaseData;
+```
+
+### SOLUCIÓN 2: Alternativa - Usar el primer elemento del array
+
+Si prefieres mantener el array, cambia la configuración del HTTP Request:
+
+**En el Body del HTTP Request, en lugar de:**
+```
+{{ $json }}
+```
+
+**Usa:**
+```
+{{ $json[0] }}
+```
+
+### SOLUCIÓN 3: Código completo corregido
+
+**Reemplaza TODO el código del nodo Code con este:**
+
+```javascript
+const items = $input.all();
+console.log('TOTAL ITEMS:', items.length);
+
+if (!items || items.length === 0) {
+  return { success: false, error: 'No hay datos' };
+}
+
+const item = items[0];
+const body = item.json?.body;
+const headers = item.json?.headers;
+
+if (!body) {
+  return { success: false, error: 'No body found' };
+}
+
+const eventType = headers?.['x-github-event'] || 'unknown';
+const repository = body.repository;
+const sender = body.sender;
+const headCommit = body.head_commit;
+
+console.log('Event:', eventType);
+console.log('Repo:', repository?.full_name);
+console.log('Sender:', sender?.login);
+console.log('Commit:', headCommit?.message);
+
+// Mapeo automático de repositorios
+const repositoryMappings = {
+  'GilbertoTM/devNotify': '99c2baa7-5288-4f09-8b0e-b132db353244',
+  'jose/project': '99c2baa7-5288-4f09-8b0e-b132db353244',
+  'arkus/project': '99c2baa7-5288-4f09-8b0e-b132db353244'
+};
+
+const projectId = repositoryMappings[repository?.full_name] || '99c2baa7-5288-4f09-8b0e-b132db353244';
+console.log('PROJECT ID:', projectId);
+
+const supabaseData = {
+  project_id: projectId,
+  type: eventType,
+  title: `Nuevo ${eventType} en ${repository?.name}`,
+  message: `${sender?.login} hizo commit: "${headCommit?.message}"`,
+  data: {
+    repository: repository?.full_name,
+    sender: sender?.login,
+    commit_message: headCommit?.message,
+    commit_sha: headCommit?.id,
+    branch: body.ref?.replace('refs/heads/', ''),
+    url: headCommit?.url,
+    timestamp: headCommit?.timestamp
+  },
+  status: 'unread'
+};
+
+console.log('DATOS PARA SUPABASE:', JSON.stringify(supabaseData, null, 2));
+
+// RETORNAR OBJETO DIRECTAMENTE, NO ARRAY
+return supabaseData;
+```
+
+### CAMBIOS CLAVE:
+
+1. **Cambié `return [supabaseData];` por `return supabaseData;`**
+2. **Cambié `return [{ success: false, error: '...' }];` por `return { success: false, error: '...' };`**
+
+### RECOMENDACIÓN:
+
+**Usa la SOLUCIÓN 3** (código completo) ya que es la más limpia y evita futuros problemas.
+
+¿Ya probaste con el código corregido?
