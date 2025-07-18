@@ -256,6 +256,39 @@ app.get('/api/github/:owner/:repo/issues', async (req, res) => {
   }
 });
 
+// Endpoint para recibir notificaciones del webhook n8n
+app.post('/api/notify', (req, res) => {
+  try {
+    const { type, project_id, notification } = req.body;
+    
+    console.log('📡 Webhook notification received:', {
+      type,
+      project_id,
+      notification: notification?.title
+    });
+
+    // Broadcast a todos los clientes WebSocket conectados
+    wss.clients.forEach((client) => {
+      if (client.readyState === WebSocket.OPEN) {
+        client.send(JSON.stringify({
+          type: 'notification',
+          data: {
+            type,
+            project_id,
+            notification,
+            timestamp: new Date().toISOString()
+          }
+        }));
+      }
+    });
+
+    res.json({ success: true, message: 'Notification sent' });
+  } catch (error) {
+    console.error('Error processing webhook notification:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 app.listen(port, () => {
   console.log(`🚀 Servidor backend corriendo en http://localhost:${port}`);
   console.log(`📡 WebSocket corriendo en ws://localhost:8082`);

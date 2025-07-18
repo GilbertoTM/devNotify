@@ -1,5 +1,5 @@
 import React from 'react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Header } from './components/Header';
 import { LoginForm } from './components/LoginForm';
 import { AdminPanel } from './components/AdminPanel';
@@ -40,6 +40,72 @@ function App() {
     createTeam,
     addIntegration,
   } = useNotifications();
+
+  // WebSocket para notificaciones en tiempo real
+  useEffect(() => {
+    if (!isAuthenticated) return;
+
+    const ws = new WebSocket('ws://localhost:8082');
+    
+    ws.onopen = () => {
+      console.log('🔌 WebSocket connected for real-time notifications');
+    };
+    
+    ws.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        
+        if (data.type === 'notification') {
+          console.log('📡 Real-time notification received:', data.data);
+          
+          // Mostrar toast notification
+          const notification = data.data.notification;
+          if (notification) {
+            // Crear elemento de notificación toast
+            const toast = document.createElement('div');
+            toast.className = 'fixed top-4 right-4 bg-blue-600 text-white px-4 py-2 rounded-lg shadow-lg z-50 transform transition-all duration-300 translate-x-full';
+            toast.innerHTML = `
+              <div class="flex items-center space-x-2">
+                <span class="text-sm font-medium">${notification.title}</span>
+                <button onclick="this.parentElement.parentElement.remove()" class="text-white hover:text-gray-200">×</button>
+              </div>
+            `;
+            
+            document.body.appendChild(toast);
+            
+            // Animar entrada
+            setTimeout(() => {
+              toast.classList.remove('translate-x-full');
+            }, 100);
+            
+            // Auto-remove después de 5 segundos
+            setTimeout(() => {
+              toast.classList.add('translate-x-full');
+              setTimeout(() => {
+                if (toast.parentElement) {
+                  toast.remove();
+                }
+              }, 300);
+            }, 5000);
+          }
+        }
+      } catch (error) {
+        console.error('Error processing WebSocket message:', error);
+      }
+    };
+    
+    ws.onclose = () => {
+      console.log('🔌 WebSocket disconnected');
+    };
+    
+    ws.onerror = (error) => {
+      console.error('WebSocket error:', error);
+    };
+    
+    return () => {
+      ws.close();
+    };
+  }, [isAuthenticated]);
 
   // Show login form if not authenticated
   if (isLoading) {
@@ -163,6 +229,72 @@ function App() {
       </div>
     );
   }
+
+  // WebSocket para notificaciones en tiempo real
+  useEffect(() => {
+    if (!isAuthenticated) return;
+
+    const ws = new WebSocket('ws://localhost:8082');
+    
+    ws.onopen = () => {
+      console.log('🔌 WebSocket connected for real-time notifications');
+    };
+    
+    ws.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        
+        if (data.type === 'notification') {
+          console.log('📡 Real-time notification received:', data.data);
+          
+          // Mostrar toast notification
+          const notification = data.data.notification;
+          if (notification) {
+            // Crear elemento de notificación toast
+            const toast = document.createElement('div');
+            toast.className = 'fixed top-4 right-4 bg-blue-600 text-white px-4 py-2 rounded-lg shadow-lg z-50 transform transition-all duration-300 translate-x-full';
+            toast.innerHTML = `
+              <div class="flex items-center space-x-2">
+                <span class="text-sm font-medium">${notification.title}</span>
+                <button onclick="this.parentElement.parentElement.remove()" class="text-white hover:text-gray-200">×</button>
+              </div>
+            `;
+            
+            document.body.appendChild(toast);
+            
+            // Animar entrada
+            setTimeout(() => {
+              toast.classList.remove('translate-x-full');
+            }, 100);
+            
+            // Auto-remove después de 5 segundos
+            setTimeout(() => {
+              toast.classList.add('translate-x-full');
+              setTimeout(() => {
+                if (toast.parentElement) {
+                  toast.remove();
+                }
+              }, 300);
+            }, 5000);
+          }
+        }
+      } catch (error) {
+        console.error('Error processing WebSocket message:', error);
+      }
+    };
+    
+    ws.onclose = () => {
+      console.log('🔌 WebSocket disconnected');
+    };
+    
+    ws.onerror = (error) => {
+      console.error('WebSocket error:', error);
+    };
+    
+    return () => {
+      ws.close();
+    };
+  }, [isAuthenticated]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white">
