@@ -547,7 +547,7 @@ Puedes verificar directamente en Supabase:
 2. **Dime qué ves en los logs de n8n**
 3. **Verifica si aparece la notificación en tu aplicación**
 
-¿Ya hiciste el commit de prueba?
+¿Ya hiciste el commit de prueba？
 
 ## SOLUCIÓN PARA ERROR "JSON parameter needs to be valid JSON"
 
@@ -660,3 +660,151 @@ Con este código, tu HTTP Request debería usar:
 - **Body Content Type**: `JSON`
 
 ¿Quieres probar con este código corregido?
+
+## CORRECCIÓN DE LA URL
+
+### URL ACTUAL (INCORRECTA):
+```
+https://uzkauyxvwxsfkkhhyyrl.supabase.co
+```
+
+### URL CORRECTA (AÑADIR LA RUTA):
+```
+https://uzkauyxvwxsfkkhhyyrl.supabase.co/rest/v1/notifications
+```
+
+### PASOS PARA CORREGIR:
+
+1. **Ve a tu nodo HTTP Request**
+2. **En el campo URL**, cambia de:
+   ```
+   https://uzkauyxvwxsfkkhhyyrl.supabase.co
+   ```
+   
+3. **A esto (añade la ruta):**
+   ```
+   https://uzkauyxvwxsfkkhhyyrl.supabase.co/rest/v1/notifications
+   ```
+
+### EXPLICACIÓN:
+- `https://uzkauyxvwxsfkkhhyyrl.supabase.co` = URL base de tu proyecto
+- `/rest/v1/notifications` = Ruta de la API para insertar en la tabla notifications
+
+### RESULTADO ESPERADO:
+Una vez que cambies la URL, deberías ver:
+- ✅ Status 200 o 201 (en lugar de 404)
+- ✅ La notificación se insertará en Supabase
+- ✅ Aparecerá en tu aplicación
+
+### PASO A PASO:
+1. **Edita el nodo HTTP Request**
+2. **Cambia la URL** añadiendo `/rest/v1/notifications`
+3. **Guarda el workflow**
+4. **Haz un commit** para probar
+
+¿Ya añadiste `/rest/v1/notifications` al final de la URL?
+
+## PROGRESO: URL CORREGIDA - Error de esquema
+
+### ¡Excelente progreso!
+- ✅ La URL ya funciona correctamente
+- ✅ La conexión con Supabase está establecida
+- ❌ El JSON tiene un campo `commit` que no existe en la tabla
+
+### EL PROBLEMA:
+El error "Could not find the 'commit' column of 'notifications'" indica que estás enviando un campo `commit` que no existe en tu tabla `notifications`.
+
+### CAUSA:
+En tu JSON tienes:
+```json
+{
+  "project_id": "99c2baa7-5288-4f09-8b0e-b132db353244",
+  "type": "push",
+  "title": "Nuevo push en devNotify",
+  "message": "GilbertoTM hizo",
+  "commit": "commit de prueba 10",  // ❌ Este campo no existe
+  "data": ["object Object"],
+  "status": "unread"
+}
+```
+
+### SOLUCIÓN:
+
+#### OPCIÓN 1: Volver al código original del nodo Code
+
+**En tu nodo HTTP Request, cambia el Body de JSON manual a:**
+```
+{{ $json }}
+```
+
+**Y usa este código en el nodo Code:**
+```javascript
+const items = $input.all();
+console.log('TOTAL ITEMS:', items.length);
+
+if (!items || items.length === 0) {
+  return { success: false, error: 'No hay datos' };
+}
+
+const item = items[0];
+const body = item.json?.body;
+const headers = item.json?.headers;
+
+if (!body) {
+  return { success: false, error: 'No body found' };
+}
+
+const eventType = headers?.['x-github-event'] || 'unknown';
+const repository = body.repository;
+const sender = body.sender;
+const headCommit = body.head_commit;
+
+console.log('Event:', eventType);
+console.log('Repo:', repository?.full_name);
+console.log('Sender:', sender?.login);
+console.log('Commit:', headCommit?.message);
+
+const supabaseData = {
+  project_id: '99c2baa7-5288-4f09-8b0e-b132db353244',
+  type: eventType,
+  title: `Nuevo ${eventType} en ${repository?.name}`,
+  message: `${sender?.login} hizo commit: "${headCommit?.message}"`,
+  data: {
+    repository: repository?.full_name,
+    sender: sender?.login,
+    commit_message: headCommit?.message,
+    commit_sha: headCommit?.id,
+    branch: body.ref?.replace('refs/heads/', ''),
+    url: headCommit?.url,
+    timestamp: headCommit?.timestamp
+  },
+  status: 'unread'
+};
+
+console.log('DATOS PARA SUPABASE:', JSON.stringify(supabaseData, null, 2));
+
+return supabaseData;
+```
+
+#### OPCIÓN 2: Corregir el JSON manual
+
+**Si prefieres seguir con JSON manual, úsalo así:**
+```json
+{
+  "project_id": "99c2baa7-5288-4f09-8b0e-b132db353244",
+  "type": "push",
+  "title": "Nuevo push en devNotify",
+  "message": "GilbertoTM hizo commit: commit de prueba 10",
+  "data": {
+    "repository": "GilbertoTM/devNotify",
+    "sender": "GilbertoTM",
+    "commit_message": "commit de prueba 10"
+  },
+  "status": "unread"
+}
+```
+
+### RECOMENDACIÓN:
+**Usa la OPCIÓN 1** (volver al código original) ya que es más automático y completo.
+
+¿Quieres probar la OPCIÓN 1?
