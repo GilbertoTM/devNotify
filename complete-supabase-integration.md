@@ -32,7 +32,7 @@ console.log('Commit:', headCommit?.message);
 
 // Preparar datos directamente para Supabase
 const supabaseData = {
-  project_id: 99c2baa7-5288-4f09-8b0e-b132db353244, // CAMBIAR POR TU ID DE PROYECTO REAL
+  project_id: '99c2baa7-5288-4f09-8b0e-b132db353244', // CAMBIAR POR TU ID DE PROYECTO REAL
   type: eventType,
   title: `Nuevo ${eventType} en ${repository?.name}`,
   message: `${sender?.login} hizo commit: "${headCommit?.message}"`,
