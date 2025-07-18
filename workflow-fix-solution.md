@@ -1,4 +1,4 @@
-# Solución para el error "Referenced node doesn't exist"
+ok# Solución para el error "Referenced node doesn't exist"
 
 ## El problema
 
